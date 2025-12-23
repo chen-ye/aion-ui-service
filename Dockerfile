@@ -39,7 +39,7 @@ ARG AION_RELEASE=latest
 RUN git clone https://github.com/iOfficeAI/AionUi . && \
     if [ "$AION_RELEASE" = "latest" ]; then \
         echo "Resolving latest stable release..." && \
-        LATEST_TAG=$(git tag -l | grep -v "-" | sort -V | tail -n 1) && \
+        LATEST_TAG=$(git tag -l | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -n 1) && \
         echo "Checking out latest stable release: $LATEST_TAG" && \
         git checkout $LATEST_TAG; \
     else \
