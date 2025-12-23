@@ -50,6 +50,9 @@ RUN git clone https://github.com/iOfficeAI/AionUi . && \
 # Install dependencies
 RUN npm install
 
+# Build the application
+RUN npm run package
+
 # Expose the application port
 EXPOSE 25808
 
@@ -58,4 +61,4 @@ EXPOSE 25808
 VOLUME ["/root/.config/AionUi"]
 
 # Start the application
-CMD ["npm", "run", "webui:prod:remote"]
+CMD ["/bin/sh", "-c", "exec /app/out/AionUi-linux-*/AionUi --webui --remote"]
