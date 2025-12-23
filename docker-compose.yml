@@ -1,7 +1,8 @@
 services:
   aionui:
     build: .
-    image: aionui:latest
+    image: ghcr.io/chen-ye/aion-ui-service:latest
+    pull_policy: always
     container_name: aionui
     restart: unless-stopped
     ports:
