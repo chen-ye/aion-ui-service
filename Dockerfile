@@ -1,5 +1,5 @@
-# Use Node.js LTS (Bookworm)
-FROM node:22-bookworm
+# Use Node.js LTS (Bookworm Slim)
+FROM node:22-bookworm-slim
 
 # Install system dependencies
 # - git: to clone the repo
@@ -26,18 +26,28 @@ RUN apt-get update && apt-get install -y \
     libpangocairo-1.0-0 \
     libxss1 \
     libgtk-3-0 \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Clone the repository
-# We clone a specific version or main branch. Since no version was specified, we clone main/default.
-RUN git clone https://github.com/iOfficeAI/AionUi .
+# Build Argument for AionUi Release Version
+ARG AION_RELEASE=latest
+
+# Clone the repository and checkout the specific version
+RUN git clone https://github.com/iOfficeAI/AionUi . && \
+    if [ "$AION_RELEASE" = "latest" ]; then \
+        echo "Resolving latest stable release..." && \
+        LATEST_TAG=$(git tag -l | grep -v "-" | sort -V | tail -n 1) && \
+        echo "Checking out latest stable release: $LATEST_TAG" && \
+        git checkout $LATEST_TAG; \
+    else \
+        echo "Checking out specified release: $AION_RELEASE" && \
+        git checkout $AION_RELEASE; \
+    fi
 
 # Install dependencies
-# unsafe-perm might be needed for some post-install scripts when running as root,
-# though usually fine in modern npm.
 RUN npm install
 
 # Expose the application port

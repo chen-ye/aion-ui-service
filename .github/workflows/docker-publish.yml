@@ -1,6 +1,8 @@
 name: Build and Publish Docker Image
 
 on:
+  schedule:
+    - cron: '0 0 * * *' # Run daily at midnight
   push:
     branches: [ "main" ]
   workflow_dispatch:
@@ -10,7 +12,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push:
+  check-and-build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,19 +29,48 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Get latest upstream version
+        id: get_version
+        run: |
+          # Fetch latest release tag from GitHub API
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/iOfficeAI/AionUi/releases/latest | jq -r .tag_name)
+          echo "Latest upstream version: $LATEST_VERSION"
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if image exists
+        id: check_image
+        env:
+          VERSION: ${{ steps.get_version.outputs.version }}
+        run: |
+          # Check if the image with this tag already exists in the registry
+          IMAGE_URL="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}"
+          echo "Checking for image: $IMAGE_URL"
+
+          if docker manifest inspect $IMAGE_URL > /dev/null 2>&1; then
+            echo "Image exists."
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Image does not exist."
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Extract metadata (tags, labels) for Docker
+        if: steps.check_image.outputs.exists == 'false' || github.event_name != 'schedule'
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha
+            type=raw,value=latest
+            type=raw,value=${{ steps.get_version.outputs.version }}
 
       - name: Build and push Docker image
+        if: steps.check_image.outputs.exists == 'false' || github.event_name != 'schedule'
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
+          build-args: |
+            AION_RELEASE=${{ steps.get_version.outputs.version }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
