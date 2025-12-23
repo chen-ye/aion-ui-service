@@ -1,0 +1,13 @@
+services:
+  aionui:
+    build: .
+    image: aionui:latest
+    container_name: aionui
+    restart: unless-stopped
+    ports:
+      - "25808:25808"
+    volumes:
+      - aionui_data:/root/.config/AionUi
+
+volumes:
+  aionui_data:
